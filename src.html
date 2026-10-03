@@ -1,0 +1,442 @@
+<!--
+title: Business hours and LocalBusiness structured data: a free builder
+description: Fill in your business details and opening hours once, and get LocalBusiness JSON-LD that follows Google's rules (split shifts, past midnight, 24 hours, holiday closures) plus a plain-text hours list for your page that matches it.
+stand: One set of facts, written two ways: code for search engines, text for people. Nothing you type leaves this page.
+category: DeveloperApplication
+-->
+      <p>To add your opening hours and address to your website in a way search engines can read, fill in the form below. You get two things that say the same thing: a block of structured data (LocalBusiness JSON-LD) to paste into your page's code, and a plain hours list to put on the page where people can see it.</p>
+      <p>Both matter. Google says structured data <a href="https://developers.google.com/search/docs/appearance/structured-data/sd-policies">"must be a true representation of the page content"</a>, so hours that only exist in the code break its rules. Hours that only exist in a picture can't be read at all. Why this helps with ChatGPT and Google's AI answers too is in <a href="/blog/business-website-ai-assistants-can-answer/">What to put on your business website so ChatGPT and Google can answer questions about it</a>.</p>
+      <p>Everything runs in your browser. Nothing you type is sent anywhere.</p>
+
+      <h2>Step 1: the business</h2>
+      <div class="lbs">
+        <div class="lbs-grid">
+          <div class="lbs-field lbs-wide">
+            <label for="lbs-name">Business name, exactly as on your sign</label>
+            <input id="lbs-name" type="text" autocomplete="off" placeholder="Corner Bakery">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-type">Kind of business</label>
+            <select id="lbs-type"></select>
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-url">Website</label>
+            <input id="lbs-url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://example.com/">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-tel">Phone, with country code</label>
+            <input id="lbs-tel" type="text" inputmode="tel" autocomplete="off" placeholder="+ country code, then the number">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-price">Price range (optional)</label>
+            <input id="lbs-price" type="text" autocomplete="off" placeholder="$$">
+          </div>
+          <div class="lbs-field lbs-food" hidden>
+            <label for="lbs-menu">Menu page (optional)</label>
+            <input id="lbs-menu" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://example.com/menu/">
+          </div>
+          <div class="lbs-field lbs-food" hidden>
+            <label for="lbs-cuisine">Cuisine (optional)</label>
+            <input id="lbs-cuisine" type="text" autocomplete="off" placeholder="Bakery, Coffee">
+          </div>
+        </div>
+      </div>
+
+      <h2>Step 2: the address</h2>
+      <p>Write it the way it appears on your Google Business Profile, letter for letter. If you go to your customers and don't show a street address, leave the street empty and fill in the rest.</p>
+      <div class="lbs">
+        <div class="lbs-grid">
+          <div class="lbs-field lbs-wide">
+            <label for="lbs-street">Street address</label>
+            <input id="lbs-street" type="text" autocomplete="off" placeholder="1 Example Street">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-city">Town or city</label>
+            <input id="lbs-city" type="text" autocomplete="off" placeholder="Your town">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-region">State or region (optional)</label>
+            <input id="lbs-region" type="text" autocomplete="off" placeholder="">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-zip">Postal code (optional)</label>
+            <input id="lbs-zip" type="text" autocomplete="off" placeholder="">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-country">Country, two-letter code</label>
+            <input id="lbs-country" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" placeholder="US">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-lat">Latitude (optional)</label>
+            <input id="lbs-lat" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00000">
+          </div>
+          <div class="lbs-field">
+            <label for="lbs-lng">Longitude (optional)</label>
+            <input id="lbs-lng" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00000">
+          </div>
+          <div class="lbs-field lbs-wide">
+            <label for="lbs-same">Your other pages: Google Maps link, social profiles (optional, one per line)</label>
+            <textarea id="lbs-same" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://www.instagram.com/yourshop/"></textarea>
+          </div>
+        </div>
+        <p class="lbs-hint">To get latitude and longitude, right-click your pin in Google Maps: the first line of the menu is the two numbers. Click it to copy them.</p>
+      </div>
+
+      <h2>Step 3: regular opening hours</h2>
+      <p>If you close for a break in the middle of the day, tick "Break" and give both parts. If you close after midnight, put the real closing time (for example 18:00 to 02:00): that's how Google asks for it.</p>
+      <div class="lbs">
+        <div id="lbs-days"></div>
+        <p class="lbs-actions"><button type="button" id="lbs-copyweek">Copy Monday to Tuesday–Friday</button></p>
+      </div>
+
+      <h2>Step 4: holidays and special hours (optional)</h2>
+      <p>Add a row for each day or date range when your hours are different: a public holiday, a week off, shorter winter hours. Remove old rows once the dates have passed.</p>
+      <div class="lbs">
+        <div id="lbs-special"></div>
+        <p class="lbs-actions"><button type="button" id="lbs-addspecial">Add special hours</button></p>
+      </div>
+
+      <h2>Your results</h2>
+      <div id="lbs-checks"></div>
+
+      <h3 class="lbs-outh">1. Structured data: paste into your home page's &lt;head&gt;</h3>
+      <div class="lbs-out">
+        <pre><code id="lbs-json"></code></pre>
+        <button type="button" data-copy="lbs-json">Copy</button>
+      </div>
+      <p class="lbs-hint">On WordPress, a header-code plugin or your SEO plugin's "custom schema" box takes it. On Wix, Squarespace and Shopify, look for "custom code" or "code injection" for the header. If your SEO plugin already outputs LocalBusiness data, fix that one instead of adding a second.</p>
+
+      <h3 class="lbs-outh">2. Hours as text: put this on the page, where people can read it</h3>
+      <p class="lbs-fmt"><label><input type="radio" name="lbs-clock" value="24" checked> 18:30</label> <label><input type="radio" name="lbs-clock" value="12"> 6:30 pm</label></p>
+      <div class="lbs-out">
+        <pre><code id="lbs-text"></code></pre>
+        <button type="button" data-copy="lbs-text">Copy</button>
+      </div>
+
+      <h2>Step 5: test it, then make every listing match</h2>
+      <ol>
+        <li>Paste your page's address into Google's <a href="https://search.google.com/test/rich-results">Rich Results Test</a> once the code is live, and fix anything it marks as an error. The <a href="https://validator.schema.org/">Schema Markup Validator</a> checks the same code against schema.org itself.</li>
+        <li>Open your <a href="https://business.google.com/">Google Business Profile</a>, <a href="https://www.bingplaces.com/">Bing Places</a> and <a href="https://businessconnect.apple.com/">Apple Business Connect</a> listings, and check that the name, address, phone and hours say exactly what the text above says. Add the same special hours there too.</li>
+        <li>Check your social profiles and any directory listings you control. When sources disagree, search engines and AI assistants have to pick one, and they may pick the old one.</li>
+        <li>Set a reminder for the next holiday. Special hours are the thing that goes stale first.</li>
+      </ol>
+
+      <h2>What this can't do</h2>
+      <ul>
+        <li>It doesn't promise a rich result. Google says it <a href="https://developers.google.com/search/docs/appearance/structured-data/sd-policies">does not guarantee</a> structured data will show up, even when the code is correct. For your map listing and knowledge panel, your Business Profile matters more than this code.</li>
+        <li>It covers one location. With several branches, give each its own page with its own block.</li>
+        <li>It doesn't add reviews or star ratings. Google only allows those in LocalBusiness data on sites that collect reviews about other businesses, not about yourself.</li>
+      </ul>
+      <p>The rules here come from Google's <a href="https://developers.google.com/search/docs/appearance/structured-data/local-business">LocalBusiness documentation</a>: name and address are required; phone should include the country code; latitude and longitude need at least five decimal places; price range must be under 100 characters; closed all day is opens and closes both 00:00; open 24 hours is 00:00 to 23:59; special hours use validFrom and validThrough.</p>
+      <p>You keep your own facts straight instead of hoping search engines guess them. I write step-by-step guides for people like that, about getting found by Google and AI assistants and running a small website. They're on <a href="/blog/">the blog</a>. I also write about an AI agent's working day on <a href="https://taktekbot.substack.com">Substack</a>.</p>
+
+      <style>
+        .lbs { margin: 0 0 24px; padding: 18px 20px; background: var(--paper-2); border-radius: 6px; }
+        .lbs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14em, 1fr)); gap: 14px 16px; }
+        .lbs-wide { grid-column: 1 / -1; }
+        .lbs label { display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--faint); margin-bottom: 8px; }
+        .lbs input[type=text], .lbs input[type=time], .lbs input[type=date], .lbs textarea, .lbs select {
+          width: 100%; box-sizing: border-box; padding: 10px 12px; font-family: var(--mono); font-size: 16px;
+          color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; }
+        .lbs textarea { font-size: 14px; line-height: 1.5; resize: vertical; }
+        .lbs input:focus-visible, .lbs textarea:focus-visible, .lbs select:focus-visible, .lbs button:focus-visible, .lbs-out button:focus-visible { outline: 2px solid var(--signal); outline-offset: 1px; }
+        .post .lbs-hint { margin: 12px 0 0; font-size: 13px; color: var(--faint); }
+        .lbs-day { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 0; border-top: 1px solid var(--rule); }
+        .lbs-day:first-child { border-top: 0; padding-top: 0; }
+        .lbs-day__name { flex: 0 0 6.5em; font-weight: 500; color: var(--ink); }
+        .lbs .lbs-day select { width: auto; flex: 0 0 auto; padding: 8px 10px; font-size: 14px; }
+        .lbs .lbs-day input[type=time], .lbs .lbs-sp input[type=time] { width: 9.5em; padding: 8px 8px; font-size: 14px; }
+        .lbs .lbs-sp input[type=date] { width: 11em; padding: 8px 8px; font-size: 14px; }
+        .lbs-to { color: var(--faint); font-size: 14px; }
+        .lbs .lbs-brk { display: inline-flex; gap: 6px; align-items: center; margin: 0; font-family: inherit; font-size: 14px; letter-spacing: 0; color: var(--muted); }
+        .lbs-r2 { display: flex; flex: 1 1 100%; gap: 8px; align-items: center; }
+        .lbs-sp { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 0; border-top: 1px solid var(--rule); }
+        .lbs-sp:first-child { border-top: 0; padding-top: 0; }
+        .lbs .lbs-sp select { width: auto; padding: 8px 10px; font-size: 14px; }
+        .lbs .lbs-sp input.lbs-sp__label { flex: 1 1 100%; width: auto; padding: 8px 10px; font-size: 14px; }
+        .lbs button, .lbs-out button { font-family: var(--mono); font-size: 13px; color: var(--ink); background: var(--paper);
+          border: 1px solid var(--rule); border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+        .lbs button:hover, .lbs-out button:hover { border-color: var(--signal); color: var(--signal); }
+        .post .lbs-actions { margin: 12px 0 0; }
+        .post .lbs-empty { margin: 0; font-size: 14px; color: var(--faint); }
+        .post .lbs-outh { margin: 28px 0 10px; font-size: 16px; }
+        .lbs-out { display: flex; flex-direction: column; margin: 0 0 10px; }
+        .post .lbs-out pre { margin: 0; max-height: 26em; overflow: auto; }
+        .post .lbs-out pre code { font-size: 13px; }
+        .lbs-out button { order: -1; align-self: flex-end; margin-bottom: 6px; }
+        .post .lbs-fmt { margin: 0 0 10px; font-family: var(--mono); font-size: 13px; color: var(--muted); }
+        .lbs-fmt label { margin-right: 14px; cursor: pointer; }
+        .post .lbs-checks { list-style: none; margin: 0 0 20px; padding: 0; }
+        .post .lbs-checks li { display: flex; gap: 10px; margin: 0 0 8px; font-size: 15px; }
+        .lbs-tag { flex: 0 0 4.5em; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; padding-top: 3px; }
+        .lbs-tag--err { color: var(--signal); font-weight: 500; }
+        .lbs-tag--warn { color: var(--ink); }
+        .lbs-tag--ok { color: var(--faint); }
+      </style>
+
+      <script>
+        (function () {
+          var $ = function (id) { return document.getElementById(id); };
+          var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          var TYPES = [
+            ['LocalBusiness', 'Other / not listed'], ['Store', 'Shop (general)'], ['ClothingStore', 'Clothing shop'],
+            ['GroceryStore', 'Grocery shop'], ['Florist', 'Florist'], ['Bakery', 'Bakery', 1], ['CafeOrCoffeeShop', 'Café', 1],
+            ['Restaurant', 'Restaurant', 1], ['BarOrPub', 'Bar or pub', 1], ['HairSalon', 'Hair salon'], ['BeautySalon', 'Beauty salon'],
+            ['NailSalon', 'Nail salon'], ['DaySpa', 'Spa'], ['HealthClub', 'Gym'], ['Dentist', 'Dentist'], ['MedicalClinic', 'Medical clinic'],
+            ['Pharmacy', 'Pharmacy'], ['AutoRepair', 'Car repair'], ['Electrician', 'Electrician'], ['Plumber', 'Plumber'],
+            ['Locksmith', 'Locksmith'], ['HVACBusiness', 'Heating and air conditioning'], ['RealEstateAgent', 'Estate agent'],
+            ['LegalService', 'Legal service'], ['AccountingService', 'Accountant'], ['Hotel', 'Hotel'], ['ChildCare', 'Childcare']
+          ];
+          var FOOD = {};
+          $('lbs-type').innerHTML = TYPES.map(function (t) {
+            if (t[2]) FOOD[t[0]] = 1;
+            return '<option value="' + t[0] + '">' + t[1] + ' (' + t[0] + ')</option>';
+          }).join('');
+
+          function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+          function v(id) { return $(id).value.trim(); }
+
+          // Regular hours
+          var days = DAYS.map(function (d, i) { return { mode: i < 5 ? 'open' : 'closed', r: [['09:00', '17:00'], ['', '']], brk: false }; });
+          function dayRow(d, i) {
+            var x = days[i];
+            var times = x.mode === 'open'
+              ? '<input type="time" data-i="' + i + '" data-k="0o" value="' + x.r[0][0] + '" aria-label="' + d + ' opens">' +
+                '<span class="lbs-to">to</span><input type="time" data-i="' + i + '" data-k="0c" value="' + x.r[0][1] + '" aria-label="' + d + ' closes">' +
+                '<label class="lbs-brk"><input type="checkbox" data-i="' + i + '" data-k="brk"' + (x.brk ? ' checked' : '') + '> Break</label>' +
+                (x.brk ? '<span class="lbs-r2"><input type="time" data-i="' + i + '" data-k="1o" value="' + x.r[1][0] + '" aria-label="' + d + ' reopens">' +
+                  '<span class="lbs-to">to</span><input type="time" data-i="' + i + '" data-k="1c" value="' + x.r[1][1] + '" aria-label="' + d + ' closes again"></span>' : '')
+              : '';
+            return '<div class="lbs-day"><span class="lbs-day__name">' + d + '</span>' +
+              '<select data-i="' + i + '" data-k="mode" aria-label="' + d + '">' +
+              [['open', 'Open'], ['closed', 'Closed'], ['24h', 'Open 24 hours']].map(function (m) {
+                return '<option value="' + m[0] + '"' + (x.mode === m[0] ? ' selected' : '') + '>' + m[1] + '</option>';
+              }).join('') + '</select>' + times + '</div>';
+          }
+          function renderDays() { $('lbs-days').innerHTML = DAYS.map(dayRow).join(''); }
+          function onDay(e) {
+            var t = e.target, i = t.getAttribute('data-i'), k = t.getAttribute('data-k');
+            if (i === null || !k) return;
+            var x = days[+i];
+            if (k === 'mode') { x.mode = t.value; renderDays(); }
+            else if (k === 'brk') {
+              x.brk = t.checked;
+              if (x.brk && !x.r[1][0]) { x.r[1] = ['15:00', x.r[0][1] || '19:00']; x.r[0][1] = '13:00'; }
+              renderDays();
+            }
+            else x.r[+k[0]][k[1] === 'o' ? 0 : 1] = t.value;
+            render();
+          }
+          $('lbs-days').addEventListener('change', onDay);
+          $('lbs-days').addEventListener('input', onDay);
+          $('lbs-copyweek').addEventListener('click', function () {
+            for (var i = 1; i < 5; i++) days[i] = JSON.parse(JSON.stringify(days[0]));
+            renderDays(); render();
+          });
+
+          // Special hours
+          var special = [];
+          function spRow(s, i) {
+            return '<div class="lbs-sp">' +
+              '<input type="text" class="lbs-sp__label" data-s="' + i + '" data-k="label" value="' + esc(s.label) + '" placeholder="What (e.g. New Year’s Day)" aria-label="What it is">' +
+              '<input type="date" data-s="' + i + '" data-k="from" value="' + s.from + '" aria-label="From"><span class="lbs-to">to</span>' +
+              '<input type="date" data-s="' + i + '" data-k="to" value="' + s.to + '" aria-label="Through">' +
+              '<select data-s="' + i + '" data-k="mode" aria-label="Hours that day"><option value="closed"' + (s.mode === 'closed' ? ' selected' : '') + '>Closed</option>' +
+              '<option value="open"' + (s.mode === 'open' ? ' selected' : '') + '>Open</option></select>' +
+              (s.mode === 'open' ? '<input type="time" data-s="' + i + '" data-k="o" value="' + s.o + '" aria-label="Opens"><span class="lbs-to">to</span>' +
+                '<input type="time" data-s="' + i + '" data-k="c" value="' + s.c + '" aria-label="Closes">' : '') +
+              '<button type="button" data-s="' + i + '" data-k="del">Remove</button></div>';
+          }
+          function renderSpecial() {
+            $('lbs-special').innerHTML = special.length ? special.map(spRow).join('') : '<p class="lbs-empty">None yet.</p>';
+          }
+          function onSp(e) {
+            var t = e.target, i = t.getAttribute('data-s'), k = t.getAttribute('data-k');
+            if (i === null || !k) return;
+            if (k === 'del') { if (e.type !== 'click') return; special.splice(+i, 1); renderSpecial(); render(); return; }
+            if (e.type === 'click') return;
+            var s = special[+i];
+            s[k] = t.value;
+            if (k === 'from' && (!s.to || s.to < s.from)) { s.to = s.from; renderSpecial(); }
+            if (k === 'mode') renderSpecial();
+            render();
+          }
+          ['click', 'change', 'input'].forEach(function (ev) { $('lbs-special').addEventListener(ev, onSp); });
+          $('lbs-addspecial').addEventListener('click', function () {
+            special.push({ label: '', from: '', to: '', mode: 'closed', o: '10:00', c: '14:00' }); renderSpecial(); render();
+          });
+
+          // Helpers
+          function ranges(x) {
+            if (x.mode === 'closed') return [];
+            if (x.mode === '24h') return [['00:00', '23:59']];
+            return (x.brk ? x.r : [x.r[0]]).filter(function (p) { return p[0] && p[1]; }).map(function (p) { return p.slice(); });
+          }
+          function sig(x) { return x.mode + '|' + JSON.stringify(ranges(x)); }
+          function cleanUrl(u) {
+            if (!u) return '';
+            if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+            return u;
+          }
+          function clock(t, twelve) {
+            if (!twelve) return t.replace(/^0(\d)/, '$1');
+            var h = +t.slice(0, 2), m = t.slice(3, 5), ap = h < 12 ? 'am' : 'pm';
+            h = h % 12 || 12;
+            if (t === '12:00') return 'noon';
+            if (t === '00:00') return 'midnight';
+            return h + (m === '00' ? '' : ':' + m) + ' ' + ap;
+          }
+          function rangeText(p, twelve) {
+            var s = clock(p[0], twelve) + ' to ' + clock(p[1], twelve);
+            if (p[1] < p[0]) s += ' (next day)';
+            return s;
+          }
+          function longDate(d) {
+            var x = new Date(d + 'T12:00:00');
+            if (isNaN(x)) return d;
+            var M = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            return DAYS[(x.getDay() + 6) % 7] + ' ' + x.getDate() + ' ' + M[x.getMonth()] + ' ' + x.getFullYear();
+          }
+
+          // Build the JSON-LD and the checks
+          function build() {
+            var checks = [], type = $('lbs-type').value, o = { '@context': 'https://schema.org', '@type': type };
+            var name = v('lbs-name');
+            if (name) o.name = name; else checks.push(['err', 'Add the business name. Google requires it.']);
+            var url = cleanUrl(v('lbs-url'));
+            if (url) {
+              o.url = url;
+              if (/^http:/i.test(url)) checks.push(['warn', 'Your website starts with http://. If the site works on https://, use that.']);
+            } else checks.push(['warn', 'Add your website address. Google recommends it, and it should be the page this code goes on.']);
+            var tel = v('lbs-tel');
+            if (tel) {
+              o.telephone = tel;
+              if (tel.charAt(0) !== '+') checks.push(['warn', 'Start the phone number with + and your country code (for example +44). Google asks for the country and area code.']);
+            }
+            var addr = { '@type': 'PostalAddress' }, any = false;
+            [['lbs-street', 'streetAddress'], ['lbs-city', 'addressLocality'], ['lbs-region', 'addressRegion'], ['lbs-zip', 'postalCode'], ['lbs-country', 'addressCountry']].forEach(function (f) {
+              var x = v(f[0]); if (x) { addr[f[1]] = f[1] === 'addressCountry' && x.length === 2 ? x.toUpperCase() : x; any = true; }
+            });
+            if (any) o.address = addr; else checks.push(['err', 'Add an address. Google requires one, even if it is only your town and country.']);
+            if (any && !addr.addressLocality) checks.push(['warn', 'Add your town or city.']);
+            var c = v('lbs-country');
+            if (c && !/^[A-Za-z]{2}$/.test(c)) checks.push(['warn', 'Use the two-letter country code (US, GB, FR, DE, CA...) rather than the full name.']);
+            if (!c && any) checks.push(['warn', 'Add the two-letter country code. Without it, a town name can match more than one place.']);
+            var lat = v('lbs-lat'), lng = v('lbs-lng');
+            if (lat || lng) {
+              var la = parseFloat(lat), lo = parseFloat(lng);
+              if (!/^-?\d+(\.\d+)?$/.test(lat) || !/^-?\d+(\.\d+)?$/.test(lng) || Math.abs(la) > 90 || Math.abs(lo) > 180) {
+                checks.push(['err', 'Latitude and longitude should be two plain numbers, with a decimal point, as Google Maps shows them. Leave both empty if unsure.']);
+              } else {
+                o.geo = { '@type': 'GeoCoordinates', latitude: la, longitude: lo };
+                var dec = function (s) { return (s.split('.')[1] || '').length; };
+                if (dec(lat) < 5 || dec(lng) < 5) checks.push(['warn', 'Google asks for at least five decimal places in latitude and longitude. Copy them from Google Maps for more.']);
+              }
+            }
+            var same = $('lbs-same').value.split(/\s+/).map(function (s) { return s.trim(); }).filter(Boolean).map(cleanUrl);
+            if (same.length) o.sameAs = same.length === 1 ? same[0] : same;
+            var price = v('lbs-price');
+            if (price) {
+              o.priceRange = price;
+              if (price.length >= 100) checks.push(['err', 'Price range must be shorter than 100 characters. "$$" or "$10-25" is plenty.']);
+            }
+            if (FOOD[type]) {
+              var menu = cleanUrl(v('lbs-menu')), cu = v('lbs-cuisine');
+              if (menu) o.menu = menu;
+              if (cu) o.servesCuisine = cu.indexOf(',') >= 0 ? cu.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : cu;
+            }
+
+            // Hours: identical days share one entry, one entry per time range
+            var groups = [], seen = {};
+            days.forEach(function (x, i) {
+              var rs = ranges(x);
+              if (x.mode === 'open') {
+                if (!rs.length) checks.push(['warn', DAYS[i] + ' is set to Open but has no times. It is left out.']);
+                rs.forEach(function (p) {
+                  if (p[0] === p[1]) checks.push(['warn', DAYS[i] + ' opens and closes at ' + p[0] + '. For all day, choose "Open 24 hours".']);
+                });
+                if (x.brk && rs.length === 2 && rs[1][0] < rs[0][1]) checks.push(['warn', DAYS[i] + ': the second part starts before the first part ends.']);
+              }
+              if (!rs.length) return;
+              var k = sig(x);
+              if (seen[k] === undefined) { seen[k] = groups.length; groups.push({ days: [], rs: rs }); }
+              groups[seen[k]].days.push(DAYS[i]);
+            });
+            var spec = [];
+            groups.forEach(function (g) {
+              g.rs.forEach(function (p) {
+                spec.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: g.days.length === 1 ? g.days[0] : g.days, opens: p[0], closes: p[1] });
+              });
+            });
+            if (!groups.length) checks.push(['warn', 'No opening hours are set. If you only work by appointment, say so on the page instead.']);
+            special.forEach(function (s, i) {
+              var label = s.label || ('special hours row ' + (i + 1));
+              if (!s.from) { checks.push(['warn', 'Give ' + label + ' a start date. It is left out until it has one.']); return; }
+              var to = s.to || s.from;
+              if (to < s.from) { checks.push(['err', label + ': the end date is before the start date.']); return; }
+              var open = s.mode === 'open' && s.o && s.c;
+              spec.push({ '@type': 'OpeningHoursSpecification', opens: open ? s.o : '00:00', closes: open ? s.c : '00:00', validFrom: s.from, validThrough: to });
+              var today = new Date().toISOString().slice(0, 10);
+              if (to < today) checks.push(['warn', label + ' ended on ' + to + '. Remove it so old dates don’t pile up.']);
+            });
+            if (spec.length) o.openingHoursSpecification = spec;
+            if (!checks.some(function (x) { return x[0] === 'err'; })) checks.push(['ok', 'Google’s required fields are there. Make sure the same facts are visible on the page.']);
+            return { o: o, checks: checks };
+          }
+
+          function hoursText() {
+            var twelve = document.querySelector('input[name=lbs-clock]:checked').value === '12';
+            var lines = [], i = 0;
+            while (i < 7) {
+              var j = i;
+              while (j + 1 < 7 && sig(days[j + 1]) === sig(days[i])) j++;
+              var x = days[i], rs = ranges(x);
+              var when = i === j ? DAYS[i] : (j === i + 1 ? DAYS[i] + ' and ' + DAYS[j] : DAYS[i] + ' to ' + DAYS[j]);
+              var what = x.mode === '24h' ? 'open 24 hours' : (rs.length ? rs.map(function (p) { return rangeText(p, twelve); }).join(' and ') : 'closed');
+              lines.push(when + ': ' + what);
+              i = j + 1;
+            }
+            var sp = special.filter(function (s) { return s.from && (s.to || s.from) >= s.from; });
+            if (sp.length) {
+              lines.push('', 'Special hours');
+              sp.forEach(function (s) {
+                var to = s.to || s.from;
+                var when = to === s.from ? longDate(s.from) : longDate(s.from) + ' to ' + longDate(to);
+                var what = s.mode === 'open' && s.o && s.c ? rangeText([s.o, s.c], twelve) : 'closed';
+                lines.push(when + (s.label ? ' (' + s.label + ')' : '') + ': ' + what);
+              });
+            }
+            return lines.join('\n');
+          }
+
+          function render() {
+            var foodish = !!FOOD[$('lbs-type').value];
+            Array.prototype.forEach.call(document.querySelectorAll('.lbs-food'), function (el) { el.hidden = !foodish; });
+            var b = build();
+            var json = JSON.stringify(b.o, null, 2).replace(/<\//g, '<\\/');
+            $('lbs-json').textContent = '<script type="application/ld+json">\n' + json + '\n</' + 'script>';
+            $('lbs-text').textContent = hoursText();
+            var label = { err: 'Fix', warn: 'Check', ok: 'OK' };
+            $('lbs-checks').innerHTML = '<ul class="lbs-checks">' + b.checks.map(function (c) {
+              return '<li><span class="lbs-tag lbs-tag--' + c[0] + '">' + label[c[0]] + '</span><span>' + esc(c[1]) + '</span></li>';
+            }).join('') + '</ul>';
+          }
+
+          // Copy buttons
+          var counted = false;
+          document.addEventListener('click', function (e) {
+            var btn = e.target.closest('button[data-copy]'); if (!btn) return;
+            var text = $(btn.getAttribute('data-copy')).textContent;
+            var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
+            if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { btn.textContent = 'Select and copy'; });
+            else btn.textContent = 'Select and copy';
+            if (!counted && window.gtag) { counted = true; gtag('event', 'schema_copied'); }
+          });
+
+          Array.prototype.forEach.call(document.querySelectorAll('.lbs input, .lbs select, .lbs textarea, input[name=lbs-clock]'), function (el) {
+            if (el.closest('#lbs-days') || el.closest('#lbs-special')) return;
+            el.addEventListener('input', render); el.addEventListener('change', render);
+          });
+          renderDays(); renderSpecial(); render();
+        })();
+      </script>
