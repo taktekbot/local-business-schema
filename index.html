@@ -233,7 +233,7 @@
         .lbs-tag--ok { color: var(--signal); }
       </style> <!-- end builder styles -->
 
-      <script> // builder: forms, hours, JSON-LD output
+      <script> // builder: forms, hours, JSON-LD output and checks
         (function () {
           var $ = function (id) { return document.getElementById(id); };
           var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -338,7 +338,7 @@
             return u;
           }
           function clock(t, twelve) {
-            if (!twelve) return t.replace(/^0(\d)/, '$1');
+            if (!twelve) return t.replace(/^0([1-9])/, '$1');
             var h = +t.slice(0, 2), m = t.slice(3, 5), ap = h < 12 ? 'am' : 'pm';
             h = h % 12 || 12;
             if (t === '12:00') return 'noon';
@@ -347,7 +347,7 @@
           }
           function rangeText(p, twelve) {
             var s = clock(p[0], twelve) + ' to ' + clock(p[1], twelve);
-            if (p[1] < p[0]) s += ' (next day)';
+            if (p[1] < p[0] && p[1] !== '00:00') s += ' (next day)';
             return s;
           }
           function longDate(d) {
@@ -371,11 +371,15 @@
             if (tel) {
               o.telephone = tel;
               if (tel.charAt(0) !== '+') checks.push(['warn', 'Start the phone number with + and your country code (for example +44). Google asks for the country and area code.']);
+              else if (/\(\s*0\s*\)/.test(tel)) checks.push(['warn', 'Drop the (0). After the + and country code, that 0 isn’t dialled, so the number as written dials wrong.']);
             }
             var addr = { '@type': 'PostalAddress' }, any = false;
             [['lbs-street', 'streetAddress'], ['lbs-city', 'addressLocality'], ['lbs-region', 'addressRegion'], ['lbs-zip', 'postalCode'], ['lbs-country', 'addressCountry']].forEach(function (f) {
               var x = v(f[0]); if (x) { addr[f[1]] = f[1] === 'addressCountry' && x.length === 2 ? x.toUpperCase() : x; any = true; }
             });
+            // UK and EL are common, but ISO 3166-1's codes are GB and GR
+            var iso = { UK: 'GB', EL: 'GR' }[addr.addressCountry];
+            if (iso) { checks.push(['warn', addr.addressCountry + ' isn’t the ISO country code. It’s ' + iso + ', so the code below uses ' + iso + '.']); addr.addressCountry = iso; }
             if (any) o.address = addr; else checks.push(['err', 'Add an address. Google requires one, even if it is only your town and country.']);
             if (any && !addr.addressLocality) checks.push(['warn', 'Add your town or city.']);
             var c = v('lbs-country');
@@ -392,7 +396,10 @@
                 if (dec(lat) < 5 || dec(lng) < 5) checks.push(['warn', 'Google asks for at least five decimal places in latitude and longitude. Copy them from Google Maps for more.']);
               }
             }
-            var same = $('lbs-same').value.split(/\s+/).map(function (s) { return s.trim(); }).filter(Boolean).map(cleanUrl);
+            var same = $('lbs-same').value.split(/[\s,]+/).filter(Boolean).filter(function (s) {
+              if (/^(https?:\/\/)?[^\s\/@]+\.[^\s\/@]+/i.test(s)) return true;
+              checks.push(['warn', '“' + s + '” isn’t a web address, so it’s left out. Paste the full profile link, like https://www.instagram.com/yourshop/.']);
+            }).map(cleanUrl);
             if (same.length) o.sameAs = same.length === 1 ? same[0] : same;
             var price = v('lbs-price');
             if (price) {
@@ -412,7 +419,8 @@
               if (x.mode === 'open') {
                 if (!rs.length) checks.push(['warn', DAYS[i] + ' is set to Open but has no times. It is left out.']);
                 rs.forEach(function (p) {
-                  if (p[0] === p[1]) checks.push(['warn', DAYS[i] + ' opens and closes at ' + p[0] + '. For all day, choose "Open 24 hours".']);
+                  if (p[0] === '00:00' && p[1] === '00:00') checks.push(['err', DAYS[i] + ' opens and closes at 00:00, which Google reads as closed all day. For all day, choose "Open 24 hours".']);
+                  else if (p[0] === p[1]) checks.push(['warn', DAYS[i] + ' opens and closes at ' + p[0] + '. For all day, choose "Open 24 hours".']);
                 });
                 if (x.brk && rs.length === 2 && rs[1][0] < rs[0][1]) checks.push(['warn', DAYS[i] + ': the second part starts before the first part ends.']);
               }
@@ -434,6 +442,7 @@
               var to = s.to || s.from;
               if (to < s.from) { checks.push(['err', label + ': the end date is before the start date.']); return; }
               var open = s.mode === 'open' && s.o && s.c;
+              if (s.mode === 'open' && !open) checks.push(['warn', label + ' is set to Open but is missing a time, so it’s written as closed.']);
               spec.push({ '@type': 'OpeningHoursSpecification', opens: open ? s.o : '00:00', closes: open ? s.c : '00:00', validFrom: s.from, validThrough: to });
               var today = new Date().toISOString().slice(0, 10);
               if (to < today) checks.push(['warn', label + ' ended on ' + to + '. Remove it so old dates don’t pile up.']);
@@ -516,7 +525,7 @@
           });
           renderDays(); renderSpecial(); render();
         })();
-      </script> <!-- end builder -->
+      </script> <!-- end builder and checks -->
       <p class="sign"><svg class="agent" style="--a:18px" viewBox="0 0 100 100" aria-hidden="true"><use href="#agent"/></svg>Made by taktekbot. Free and open source: <a href="https://github.com/taktekbot/local-business-schema">github.com/taktekbot/local-business-schema</a></p>
     </article>
     <footer>
