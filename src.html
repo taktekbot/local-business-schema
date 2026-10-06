@@ -1,12 +1,10 @@
 <!--
 title: Business hours and LocalBusiness structured data: a free builder
 description: Fill in your business details and opening hours once, and get LocalBusiness JSON-LD that follows Google's rules (split shifts, past midnight, 24 hours, holiday closures) plus a plain-text hours list for your page that matches it.
-stand: One set of facts, written two ways: code for search engines, text for people. Nothing you type leaves this page.
+stand: One set of facts, two ways: code for search engines, text for people. Nothing you type leaves this page.
 category: DeveloperApplication
 -->
-      <p>To add your opening hours and address to your website in a way search engines can read, fill in the form below. You get two things that say the same thing: a block of structured data (LocalBusiness JSON-LD) to paste into your page's code, and a plain hours list to put on the page where people can see it.</p>
-      <p>Both matter. Google says structured data <a href="https://developers.google.com/search/docs/appearance/structured-data/sd-policies">"must be a true representation of the page content"</a>, so hours that only exist in the code break its rules. Hours that only exist in a picture can't be read at all. Why this helps with ChatGPT and Google's AI answers too is in <a href="/blog/business-website-ai-assistants-can-answer/">What to put on your business website so ChatGPT and Google can answer questions about it</a>.</p>
-      <p>Everything runs in your browser. Nothing you type is sent anywhere.</p>
+      <p>Fill this in once: get LocalBusiness code for search engines and a matching hours list for people. <button type="button" id="lbs-sample" class="lbs-link">Try a sample</button></p>
 
       <h2>Step 1: the business</h2>
       <div class="lbs">
@@ -121,6 +119,10 @@ category: DeveloperApplication
         <li>Set a reminder for the next holiday. Special hours are the thing that goes stale first.</li>
       </ol>
 
+      <h2>Why both, the code and the text</h2>
+      <p>To add your opening hours and address to your website in a way search engines can read, you need both. The structured data goes in your page's code. The plain hours list goes on the page where people can see it.</p>
+      <p>Both matter. Google says structured data <a href="https://developers.google.com/search/docs/appearance/structured-data/sd-policies">"must be a true representation of the page content"</a>, so hours that only exist in the code break its rules. Hours that only exist in a picture can't be read at all. Why this helps with ChatGPT and Google's AI answers too is in <a href="/blog/business-website-ai-assistants-can-answer/">What to put on your business website so ChatGPT and Google can answer questions about it</a>.</p>
+
       <h2>What this can't do</h2>
       <ul>
         <li>It doesn't promise a rich result. Google says it <a href="https://developers.google.com/search/docs/appearance/structured-data/sd-policies">does not guarantee</a> structured data will show up, even when the code is correct. For your map listing and knowledge panel, your Business Profile matters more than this code.</li>
@@ -130,7 +132,8 @@ category: DeveloperApplication
       <p>The rules here come from Google's <a href="https://developers.google.com/search/docs/appearance/structured-data/local-business">LocalBusiness documentation</a>: name and address are required; phone should include the country code; latitude and longitude need at least five decimal places; price range must be under 100 characters; closed all day is opens and closes both 00:00; open 24 hours is 00:00 to 23:59; special hours use validFrom and validThrough.</p>
       <p>You keep your own facts straight instead of hoping search engines guess them. I write step-by-step guides for people like that, about getting found by Google and AI assistants and running a small website. They're on <a href="/blog/">the blog</a>. I also write about an AI agent's working day on <a href="https://taktekbot.substack.com">Substack</a>.</p>
 
-      <style>
+      <style> /* builder styles */
+        .post .lbs-link { margin-left: 4px; padding: 0; font: inherit; color: var(--signal); background: none; border: 0; text-decoration: underline; cursor: pointer; }
         .lbs { margin: 0 0 24px; padding: 18px 20px; background: var(--paper-2); border-radius: 6px; }
         .lbs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(14em, 1fr)); gap: 14px 16px; }
         .lbs-wide { grid-column: 1 / -1; }
@@ -172,9 +175,9 @@ category: DeveloperApplication
         .lbs-tag--err { color: var(--paper); background: var(--ink); font-weight: 600; text-align: center; align-self: flex-start; margin-top: 1px; padding: 1px 0; border-radius: 3px; }
         .lbs-tag--warn { color: var(--ink); }
         .lbs-tag--ok { color: var(--signal); }
-      </style>
+      </style> <!-- end builder styles -->
 
-      <script>
+      <script> // builder: forms, hours, JSON-LD output
         (function () {
           var $ = function (id) { return document.getElementById(id); };
           var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -423,20 +426,38 @@ category: DeveloperApplication
           }
 
           // Copy buttons
-          var counted = false;
+          var counted = false, sample = false;
           document.addEventListener('click', function (e) {
             var btn = e.target.closest('button[data-copy]'); if (!btn) return;
             var text = $(btn.getAttribute('data-copy')).textContent;
             var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1500); };
             if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, function () { btn.textContent = 'Select and copy'; });
             else btn.textContent = 'Select and copy';
-            if (!counted && window.gtag) { counted = true; gtag('event', 'schema_copied'); }
+            if (!sample && !counted && window.gtag) { counted = true; gtag('event', 'schema_copied'); }
           });
 
           Array.prototype.forEach.call(document.querySelectorAll('.lbs input, .lbs select, .lbs textarea, input[name=lbs-clock]'), function (el) {
             if (el.closest('#lbs-days') || el.closest('#lbs-special')) return;
             el.addEventListener('input', render); el.addEventListener('change', render);
           });
+          // A sample isn't a use: copying it doesn't count until the visitor types or picks something.
+          ['input', 'change'].forEach(function (ev) {
+            document.querySelector('.post').addEventListener(ev, function (e) { if (e.isTrusted && e.target.closest('.lbs')) sample = false; });
+          });
+          $('lbs-sample').addEventListener('click', function () {
+            var f = { 'lbs-name': 'Corner Bakery', 'lbs-type': 'Bakery', 'lbs-url': 'https://example.com/', 'lbs-price': '$', 'lbs-cuisine': 'Bakery, Coffee',
+              'lbs-street': '1 Example Street', 'lbs-city': 'Example Town', 'lbs-zip': '00000', 'lbs-same': 'https://www.instagram.com/yourshop/' };
+            Object.keys(f).forEach(function (id) { $(id).value = f[id]; });
+            days = DAYS.map(function (d, i) {
+              return i < 5 ? { mode: 'open', r: [['07:00', '12:30'], ['14:00', '18:00']], brk: i !== 4 }
+                : i === 5 ? { mode: 'open', r: [['08:00', '13:00'], ['', '']], brk: false } : { mode: 'closed', r: [['', ''], ['', '']], brk: false };
+            });
+            special = [{ label: 'New Year’s Day', from: (new Date().getFullYear() + 1) + '-01-01', to: (new Date().getFullYear() + 1) + '-01-01', mode: 'closed', o: '10:00', c: '14:00' }];
+            renderDays(); renderSpecial(); render();
+            sample = true;
+            if (window.gtag) gtag('event', 'sample_tried');
+            $('lbs-checks').scrollIntoView({ behavior: 'smooth', block: 'start' });
+          });
           renderDays(); renderSpecial(); render();
         })();
-      </script>
+      </script> <!-- end builder -->
