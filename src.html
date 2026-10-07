@@ -77,7 +77,7 @@ category: DeveloperApplication
             <textarea id="lbs-same" rows="3" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://www.instagram.com/yourshop/"></textarea>
           </div>
         </div>
-        <p class="lbs-hint">To get latitude and longitude, right-click your pin in Google Maps: the first line of the menu is the two numbers. Click it to copy them.</p>
+        <p class="lbs-hint">To get latitude and longitude, right-click your pin in Google Maps: the first line of the menu is the two numbers. Click it to copy them, and paste both into either box.</p>
       </div>
 
       <h2>Step 3: regular opening hours</h2>
@@ -177,7 +177,7 @@ category: DeveloperApplication
         .lbs-tag--ok { color: var(--signal); }
       </style> <!-- end builder styles -->
 
-      <script> // builder: forms, hours, JSON-LD output and checks
+      <script> // builder: forms, hours, pasted-input reading, JSON-LD output and checks
         (function () {
           var $ = function (id) { return document.getElementById(id); };
           var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -281,6 +281,44 @@ category: DeveloperApplication
             if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
             return u;
           }
+          // A web address from what was typed: "Website: https://..." keeps the link, "my bakery" gives ''
+          function webAddr(s) {
+            var m = s.match(/https?:\/\/\S+/i);
+            if (m) s = m[0]; else if (/\s/.test(s)) return '';
+            s = cleanUrl(s);
+            try { var h = new URL(s).hostname; } catch (e) { return ''; }
+            return /^[^.]+(\.[^.]+)+$/.test(h) ? s : '';
+          }
+          // One coordinate: 41.40338, +41.40338, 41,40338 (decimal comma) or 41°24'12.2"N
+          function coord(s) {
+            s = s.trim();
+            if (/^[+-]?\d+(\.\d+)?$/.test(s)) return { n: parseFloat(s), d: (s.split('.')[1] || '').length };
+            if (/^[+-]?\d+,\d+$/.test(s)) return coord(s.replace(',', '.'));
+            var m = s.match(/^(\d+)\s*°\s*(?:(\d+(?:\.\d+)?)\s*['′]\s*)?(?:(\d+(?:\.\d+)?)\s*["″]\s*)?([NSEW])$/i);
+            if (!m) return null;
+            var n = +m[1] + (+m[2] || 0) / 60 + (+m[3] || 0) / 3600;
+            return { n: +(/[SW]/i.test(m[4]) ? -n : n).toFixed(6), d: 6, ns: /[NS]/i.test(m[4]) };
+          }
+          // Both coordinates pasted into one box, as Google Maps copies them: "41.40338, 2.17403",
+          // 41°24'12.2"N 2°10'26.5"E, or a place link with !3d<lat>!4d<lng>
+          function coordPair(s) {
+            var m = s.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+            if (m) return [coord(m[1]), coord(m[2])];
+            m = s.trim().match(/^([+-]?\d+(?:\.\d+)?)\s*[,;\s]\s*([+-]?\d+(?:\.\d+)?)$/) ||
+              s.trim().match(/^(\d+\s*°[^NSEW]*[NS])[\s,]+(\d+\s*°[^NSEW]*[EW])$/i);
+            return m ? [coord(m[1]), coord(m[2])] : null;
+          }
+          // Country names people type instead of the code
+          var COUNTRY = { USA: 'US', 'U.S.': 'US', 'U.S.A.': 'US', AMERICA: 'US', 'UNITED STATES OF AMERICA': 'US', ENGLAND: 'GB', SCOTLAND: 'GB', WALES: 'GB', 'NORTHERN IRELAND': 'GB', BRITAIN: 'GB', 'GREAT BRITAIN': 'GB', HOLLAND: 'NL', UAE: 'AE', TURKEY: 'TR', 'CZECH REPUBLIC': 'CZ', 'IVORY COAST': 'CI' };
+          try {
+            var dn = new Intl.DisplayNames(['en'], { type: 'region', fallback: 'none' }), A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            for (var ci = 0; ci < 26; ci++) for (var cj = 0; cj < 26; cj++) {
+              var cc = A[ci] + A[cj], cn = dn.of(cc);
+              // Skip old codes (UK, BU, ZR...) and groups that aren't countries (EU, UN...)
+              if (!cn || Intl.getCanonicalLocales('und-' + cc)[0] !== 'und-' + cc || /^(EU|EZ|UN|Q[M-Z]|X[A-J]|ZZ)$/.test(cc)) continue;
+              [cn, cn.replace(/\s*\(.*\)$/, '')].forEach(function (k) { k = k.toUpperCase(); if (!COUNTRY[k]) COUNTRY[k] = cc; });
+            }
+          } catch (e) {}
           function clock(t, twelve) {
             if (!twelve) return t.replace(/^0([1-9])/, '$1');
             var h = +t.slice(0, 2), m = t.slice(3, 5), ap = h < 12 ? 'am' : 'pm';
@@ -306,15 +344,17 @@ category: DeveloperApplication
             var checks = [], type = $('lbs-type').value, o = { '@context': 'https://schema.org', '@type': type };
             var name = v('lbs-name');
             if (name) o.name = name; else checks.push(['err', 'Add the business name. Google requires it.']);
-            var url = cleanUrl(v('lbs-url'));
-            if (url) {
+            var url = webAddr(v('lbs-url'));
+            if (v('lbs-url') && !url) checks.push(['warn', '“' + v('lbs-url') + '” isn’t a web address, so it’s left out. Type it like example.com or https://example.com/.']);
+            else if (url) {
               o.url = url;
               if (/^http:/i.test(url)) checks.push(['warn', 'Your website starts with http://. If the site works on https://, use that.']);
             } else checks.push(['warn', 'Add your website address. Google recommends it, and it should be the page this code goes on.']);
-            var tel = v('lbs-tel');
+            var tel = v('lbs-tel').replace(/^tel:\s*/i, '');
             if (tel) {
               o.telephone = tel;
-              if (tel.charAt(0) !== '+') checks.push(['warn', 'Start the phone number with + and your country code (for example +44). Google asks for the country and area code.']);
+              if (/^00/.test(tel)) checks.push(['warn', 'Replace the 00 at the start with +. The + means “the international prefix” from anywhere, while 00 is only how some countries dial out.']);
+              else if (tel.charAt(0) !== '+') checks.push(['warn', 'Start the phone number with + and your country code (for example +44). Google asks for the country and area code.']);
               else if (/\(\s*0\s*\)/.test(tel)) checks.push(['warn', 'Drop the (0). After the + and country code, that 0 isn’t dialled, so the number as written dials wrong.']);
             }
             var addr = { '@type': 'PostalAddress' }, any = false;
@@ -324,23 +364,28 @@ category: DeveloperApplication
             // UK and EL are common, but ISO 3166-1's codes are GB and GR
             var iso = { UK: 'GB', EL: 'GR' }[addr.addressCountry];
             if (iso) { checks.push(['warn', addr.addressCountry + ' isn’t the ISO country code. It’s ' + iso + ', so the code below uses ' + iso + '.']); addr.addressCountry = iso; }
+            var named = addr.addressCountry && addr.addressCountry.length > 2 && COUNTRY[addr.addressCountry.toUpperCase().replace(/\s+/g, ' ')];
+            if (named) { checks.push(['warn', 'Google asks for the two-letter country code, so the code below writes ' + addr.addressCountry + ' as ' + named + '.']); addr.addressCountry = named; }
             if (any) o.address = addr; else checks.push(['err', 'Add an address. Google requires one, even if it is only your town and country.']);
             if (any && !addr.addressLocality) checks.push(['warn', 'Add your town or city.']);
             var c = v('lbs-country');
-            if (c && !/^[A-Za-z]{2}$/.test(c)) checks.push(['warn', 'Use the two-letter country code (US, GB, FR, DE, CA...) rather than the full name.']);
+            if (c && !named && !/^[A-Za-z]{2}$/.test(c)) checks.push(['warn', 'Use the two-letter country code (US, GB, FR, DE, CA...) rather than the full name.']);
             if (!c && any) checks.push(['warn', 'Add the two-letter country code. Without it, a town name can match more than one place.']);
             var lat = v('lbs-lat'), lng = v('lbs-lng');
             if (lat || lng) {
-              var la = parseFloat(lat), lo = parseFloat(lng);
-              if (!/^-?\d+(\.\d+)?$/.test(lat) || !/^-?\d+(\.\d+)?$/.test(lng) || Math.abs(la) > 90 || Math.abs(lo) > 180) {
-                checks.push(['err', 'Latitude and longitude should be two plain numbers, with a decimal point, as Google Maps shows them. Leave both empty if unsure.']);
+              // Google Maps copies both numbers at once, so either box may hold the pair
+              var pair = (!lng || lng === lat) && coordPair(lat) || (!lat && coordPair(lng));
+              var la = pair ? pair[0] : coord(lat), lo = pair ? pair[1] : coord(lng);
+              if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/i.test(lat + lng) && !pair) {
+                checks.push(['err', 'That’s a map link, not the coordinates. Right-click your pin in Google Maps and click the two numbers at the top of the menu, then paste them here.']);
+              } else if (!la || !lo || (la.ns === false) || (lo.ns === true) || Math.abs(la.n) > 90 || Math.abs(lo.n) > 180) {
+                checks.push(['err', 'Latitude and longitude should be numbers like 41.40338 and 2.17403, as Google Maps copies them. Leave both empty if unsure.']);
               } else {
-                o.geo = { '@type': 'GeoCoordinates', latitude: la, longitude: lo };
-                var dec = function (s) { return (s.split('.')[1] || '').length; };
-                if (dec(lat) < 5 || dec(lng) < 5) checks.push(['warn', 'Google asks for at least five decimal places in latitude and longitude. Copy them from Google Maps for more.']);
+                o.geo = { '@type': 'GeoCoordinates', latitude: la.n, longitude: lo.n };
+                if (la.d < 5 || lo.d < 5) checks.push(['warn', 'Google asks for at least five decimal places in latitude and longitude. Copy them from Google Maps for more.']);
               }
             }
-            var same = $('lbs-same').value.split(/[\s,]+/).filter(Boolean).filter(function (s) {
+            var same = $('lbs-same').value.split(/[\s,]+/).filter(function (s) { return s && !/^[^.\/]*:$/.test(s); }).filter(function (s) {
               if (/^(https?:\/\/)?[^\s\/@]+\.[^\s\/@]+/i.test(s)) return true;
               checks.push(['warn', '“' + s + '” isn’t a web address, so it’s left out. Paste the full profile link, like https://www.instagram.com/yourshop/.']);
             }).map(cleanUrl);
@@ -351,7 +396,7 @@ category: DeveloperApplication
               if (price.length >= 100) checks.push(['err', 'Price range must be shorter than 100 characters. "$$" or "$10-25" is plenty.']);
             }
             if (FOOD[type]) {
-              var menu = cleanUrl(v('lbs-menu')), cu = v('lbs-cuisine');
+              var menu = webAddr(v('lbs-menu')), cu = v('lbs-cuisine');
               if (menu) o.menu = menu;
               if (cu) o.servesCuisine = cu.indexOf(',') >= 0 ? cu.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : cu;
             }
@@ -469,4 +514,4 @@ category: DeveloperApplication
           });
           renderDays(); renderSpecial(); render();
         })();
-      </script> <!-- end builder and checks -->
+      </script> <!-- end builder, input reading and checks -->
