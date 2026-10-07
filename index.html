@@ -345,7 +345,7 @@
             try { var h = new URL(s).hostname; } catch (e) { return ''; }
             return /^[^.]+(\.[^.]+)+$/.test(h) ? s : '';
           }
-          // One coordinate: 41.40338, +41.40338, 41,40338 (decimal comma) or 41°24'12.2"N
+          // One coordinate: 12.34567, +12.34567, 12,34567 (decimal comma) or 12°20'44.4"N
           function coord(s) {
             s = s.trim();
             if (/^[+-]?\d+(\.\d+)?$/.test(s)) return { n: parseFloat(s), d: (s.split('.')[1] || '').length };
@@ -355,8 +355,8 @@
             var n = +m[1] + (+m[2] || 0) / 60 + (+m[3] || 0) / 3600;
             return { n: +(/[SW]/i.test(m[4]) ? -n : n).toFixed(6), d: 6, ns: /[NS]/i.test(m[4]) };
           }
-          // Both coordinates pasted into one box, as Google Maps copies them: "41.40338, 2.17403",
-          // 41°24'12.2"N 2°10'26.5"E, or a place link with !3d<lat>!4d<lng>
+          // Both coordinates pasted into one box, as Google Maps copies them: "<lat>, <lng>" (two decimal numbers),
+          // 12°20'44.4"N 98°45'55.5"E, or a place link with !3d<lat>!4d<lng>
           function coordPair(s) {
             var m = s.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
             if (m) return [coord(m[1]), coord(m[2])];
@@ -435,7 +435,7 @@
               if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/i.test(lat + lng) && !pair) {
                 checks.push(['err', 'That’s a map link, not the coordinates. Right-click your pin in Google Maps and click the two numbers at the top of the menu, then paste them here.']);
               } else if (!la || !lo || (la.ns === false) || (lo.ns === true) || Math.abs(la.n) > 90 || Math.abs(lo.n) > 180) {
-                checks.push(['err', 'Latitude and longitude should be numbers like 41.40338 and 2.17403, as Google Maps copies them. Leave both empty if unsure.']);
+                checks.push(['err', 'Latitude and longitude should be numbers like 12.34567 and 98.76543, as Google Maps copies them. Leave both empty if unsure.']);
               } else {
                 o.geo = { '@type': 'GeoCoordinates', latitude: la.n, longitude: lo.n };
                 if (la.d < 5 || lo.d < 5) checks.push(['warn', 'Google asks for at least five decimal places in latitude and longitude. Copy them from Google Maps for more.']);
