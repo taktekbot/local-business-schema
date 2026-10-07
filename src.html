@@ -10,7 +10,7 @@ category: DeveloperApplication
       <div class="lbs">
         <div class="lbs-grid">
           <div class="lbs-field lbs-wide">
-            <label for="lbs-name">Business name, exactly as on your sign</label>
+            <label for="lbs-name">Business name, exactly as on your sign or website</label>
             <input id="lbs-name" type="text" autocomplete="off" placeholder="Corner Bakery">
           </div>
           <div class="lbs-field">
@@ -41,7 +41,7 @@ category: DeveloperApplication
       </div>
 
       <h2>Step 2: the address</h2>
-      <p>Write it the way it appears on your Google Business Profile, letter for letter. If you go to your customers and don't show a street address, leave the street empty and fill in the rest.</p>
+      <p>Write it the way it appears on your Google Business Profile, letter for letter. If you go to your customers and don't show a street address, leave the street empty and fill in the rest. If you're online only, with no place customers visit and no area you serve in person, pick "Online shop" or "Online service" in Step 1: the address becomes optional (a mailing address is fine), and the code uses the type Google suggests for online businesses.</p>
       <div class="lbs">
         <div class="lbs-grid">
           <div class="lbs-field lbs-wide">
@@ -114,7 +114,7 @@ category: DeveloperApplication
       <h2>Step 5: test it, then make every listing match</h2>
       <ol>
         <li>Paste your page's address into Google's <a href="https://search.google.com/test/rich-results">Rich Results Test</a> once the code is live, and fix anything it marks as an error. The <a href="https://validator.schema.org/">Schema Markup Validator</a> checks the same code against schema.org itself.</li>
-        <li>Open your <a href="https://business.google.com/">Google Business Profile</a>, <a href="https://www.bingplaces.com/">Bing Places</a> and <a href="https://businessconnect.apple.com/">Apple Business Connect</a> listings, and check that the name, address, phone and hours say exactly what the text above says. Add the same special hours there too.</li>
+        <li>If customers meet you in person, open your <a href="https://business.google.com/">Google Business Profile</a>, <a href="https://www.bingplaces.com/">Bing Places</a> and <a href="https://businessconnect.apple.com/">Apple Business Connect</a> listings, and check that the name, address, phone and hours say exactly what the text above says. Add the same special hours there too.</li>
         <li>Check your social profiles and any directory listings you control. When sources disagree, search engines and AI assistants have to pick one, and they may pick the old one.</li>
         <li>Set a reminder for the next holiday. Special hours are the thing that goes stale first.</li>
       </ol>
@@ -129,7 +129,7 @@ category: DeveloperApplication
         <li>It covers one location. With several branches, give each its own page with its own block.</li>
         <li>It doesn't add reviews or star ratings. Google only allows those in LocalBusiness data on sites that collect reviews about other businesses, not about yourself.</li>
       </ul>
-      <p>The rules here come from Google's <a href="https://developers.google.com/search/docs/appearance/structured-data/local-business">LocalBusiness documentation</a>: name and address are required; phone should include the country code; latitude and longitude need at least five decimal places; price range must be under 100 characters; closed all day is opens and closes both 00:00; open 24 hours is 00:00 to 23:59; special hours use validFrom and validThrough.</p>
+      <p>The rules here come from Google's <a href="https://developers.google.com/search/docs/appearance/structured-data/local-business">LocalBusiness documentation</a>: name and address are required; phone should include the country code; latitude and longitude need at least five decimal places; price range must be under 100 characters; closed all day is opens and closes both 00:00; open 24 hours is 00:00 to 23:59; special hours use validFrom and validThrough. For online-only businesses, Google's <a href="https://developers.google.com/search/docs/appearance/structured-data/organization">Organization documentation</a> suggests the OnlineStore type for an ecommerce site and OnlineBusiness otherwise, and lists no required fields.</p>
       <p>You keep your own facts straight instead of hoping search engines guess them. I write step-by-step guides for people like that, about getting found by Google and AI assistants and running a small website. They're on <a href="/blog/">the blog</a>. I also write about an AI agent's working day on <a href="https://taktekbot.substack.com">Substack</a>.</p>
 
       <style> /* builder styles */
@@ -182,7 +182,7 @@ category: DeveloperApplication
           var $ = function (id) { return document.getElementById(id); };
           var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
           var TYPES = [
-            ['LocalBusiness', 'Other / not listed'], ['Store', 'Shop (general)'], ['ClothingStore', 'Clothing shop'],
+            ['LocalBusiness', 'Other / not listed'], ['OnlineStore', 'Online shop, no premises', 0, 1], ['OnlineBusiness', 'Online service, no premises', 0, 1], ['Store', 'Shop (general)'], ['ClothingStore', 'Clothing shop'],
             ['GroceryStore', 'Grocery shop'], ['Florist', 'Florist'], ['Bakery', 'Bakery', 1], ['CafeOrCoffeeShop', 'Café', 1],
             ['Restaurant', 'Restaurant', 1], ['BarOrPub', 'Bar or pub', 1], ['HairSalon', 'Hair salon'], ['BeautySalon', 'Beauty salon'],
             ['NailSalon', 'Nail salon'], ['DaySpa', 'Spa'], ['HealthClub', 'Gym'], ['Dentist', 'Dentist'], ['MedicalClinic', 'Medical clinic'],
@@ -190,9 +190,10 @@ category: DeveloperApplication
             ['Locksmith', 'Locksmith'], ['HVACBusiness', 'Heating and air conditioning'], ['RealEstateAgent', 'Estate agent'],
             ['LegalService', 'Legal service'], ['AccountingService', 'Accountant'], ['Hotel', 'Hotel'], ['ChildCare', 'Childcare']
           ];
-          var FOOD = {};
+          var FOOD = {}, ONLINE = {};
           $('lbs-type').innerHTML = TYPES.map(function (t) {
             if (t[2]) FOOD[t[0]] = 1;
+            if (t[3]) ONLINE[t[0]] = 1;
             return '<option value="' + t[0] + '">' + t[1] + ' (' + t[0] + ')</option>';
           }).join('');
 
@@ -341,7 +342,7 @@ category: DeveloperApplication
 
           // Build the JSON-LD and the checks
           function build() {
-            var checks = [], type = $('lbs-type').value, o = { '@context': 'https://schema.org', '@type': type };
+            var checks = [], type = $('lbs-type').value, online = !!ONLINE[type], o = { '@context': 'https://schema.org', '@type': type };
             var name = v('lbs-name');
             if (name) o.name = name; else checks.push(['err', 'Add the business name. Google requires it.']);
             var url = webAddr(v('lbs-url'));
@@ -366,13 +367,14 @@ category: DeveloperApplication
             if (iso) { checks.push(['warn', addr.addressCountry + ' isn’t the ISO country code. It’s ' + iso + ', so the code below uses ' + iso + '.']); addr.addressCountry = iso; }
             var named = addr.addressCountry && addr.addressCountry.length > 2 && COUNTRY[addr.addressCountry.toUpperCase().replace(/\s+/g, ' ')];
             if (named) { checks.push(['warn', 'Google asks for the two-letter country code, so the code below writes ' + addr.addressCountry + ' as ' + named + '.']); addr.addressCountry = named; }
-            if (any) o.address = addr; else checks.push(['err', 'Add an address. Google requires one, even if it is only your town and country.']);
-            if (any && !addr.addressLocality) checks.push(['warn', 'Add your town or city.']);
+            if (any) o.address = addr; else if (!online) checks.push(['err', 'Add an address. Google requires one, even if it is only your town and country.']);
+            if (any && !addr.addressLocality && !online) checks.push(['warn', 'Add your town or city.']);
             var c = v('lbs-country');
             if (c && !named && !/^[A-Za-z]{2}$/.test(c)) checks.push(['warn', 'Use the two-letter country code (US, GB, FR, DE, CA...) rather than the full name.']);
-            if (!c && any) checks.push(['warn', 'Add the two-letter country code. Without it, a town name can match more than one place.']);
+            if (!c && any && !online) checks.push(['warn', 'Add the two-letter country code. Without it, a town name can match more than one place.']);
             var lat = v('lbs-lat'), lng = v('lbs-lng');
-            if (lat || lng) {
+            if ((lat || lng) && online) checks.push(['warn', 'Latitude and longitude are left out. They mark a place on a map, and schema.org’s online business types have no field for them.']);
+            else if (lat || lng) {
               // Google Maps copies both numbers at once, so either box may hold the pair
               var pair = (!lng || lng === lat) && coordPair(lat) || (!lat && coordPair(lng));
               var la = pair ? pair[0] : coord(lat), lo = pair ? pair[1] : coord(lng);
@@ -391,7 +393,8 @@ category: DeveloperApplication
             }).map(cleanUrl);
             if (same.length) o.sameAs = same.length === 1 ? same[0] : same;
             var price = v('lbs-price');
-            if (price) {
+            if (price && online) checks.push(['warn', 'Price range is left out. It’s a field for places, and schema.org’s online business types don’t have it. Put your prices on the page instead.']);
+            else if (price) {
               o.priceRange = price;
               if (price.length >= 100) checks.push(['err', 'Price range must be shorter than 100 characters. "$$" or "$10-25" is plenty.']);
             }
@@ -424,7 +427,7 @@ category: DeveloperApplication
                 spec.push({ '@type': 'OpeningHoursSpecification', dayOfWeek: g.days.length === 1 ? g.days[0] : g.days, opens: p[0], closes: p[1] });
               });
             });
-            if (!groups.length) checks.push(['warn', 'No opening hours are set. If you only work by appointment, say so on the page instead.']);
+            if (!groups.length && !online) checks.push(['warn', 'No opening hours are set. If you only work by appointment, say so on the page instead.']);
             special.forEach(function (s, i) {
               var label = s.label || ('special hours row ' + (i + 1));
               if (!s.from) { checks.push(['warn', 'Give ' + label + ' a start date. It is left out until it has one.']); return; }
@@ -436,8 +439,10 @@ category: DeveloperApplication
               var today = new Date().toISOString().slice(0, 10);
               if (to < today) checks.push(['warn', label + ' ended on ' + to + '. Remove it so old dates don’t pile up.']);
             });
-            if (spec.length) o.openingHoursSpecification = spec;
-            if (!checks.some(function (x) { return x[0] === 'err'; })) checks.push(['ok', 'Google’s required fields are there. Make sure the same facts are visible on the page.']);
+            if (spec.length && online) checks.push(['warn', 'The hours are left out of the code: schema.org’s online business types have no opening-hours field. The text list below still works on your page, for example as “When we answer messages”.']);
+            else if (spec.length) o.openingHoursSpecification = spec;
+            if (online && !checks.some(function (x) { return x[0] === 'err'; })) checks.push(['ok', 'Google has no required fields for an online business; name, website and your other pages are the ones that help most. Put it on your home page or about page.']);
+            else if (!checks.some(function (x) { return x[0] === 'err'; })) checks.push(['ok', 'Google’s required fields are there. Make sure the same facts are visible on the page.']);
             return { o: o, checks: checks };
           }
 
