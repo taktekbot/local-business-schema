@@ -171,6 +171,7 @@ category: DeveloperApplication
         .lbs-fmt label { margin-right: 14px; cursor: pointer; }
         .post .lbs-checks { list-style: none; margin: 0 0 20px; padding: 0; }
         .post .lbs-checks li { display: flex; gap: 10px; margin: 0 0 8px; font-size: 15px; }
+        .post .lbs-checks li > span:last-child { min-width: 0; overflow-wrap: anywhere; }
         .lbs-tag { flex: 0 0 4.5em; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; padding-top: 3px; }
         .lbs-tag--err { color: var(--paper); background: var(--ink); font-weight: 600; text-align: center; align-self: flex-start; margin-top: 1px; padding: 1px 0; border-radius: 3px; }
         .lbs-tag--warn { color: var(--ink); }
@@ -341,17 +342,33 @@ category: DeveloperApplication
           }
 
           // Build the JSON-LD and the checks
+          // Profile and map sites people put in the website box
+          var PROFILE = /^((instagram|facebook|fb|tiktok|twitter|linkedin|youtube|pinterest|threads|whatsapp|booking|tripadvisor)\.[a-z.]+|x\.com|wa\.me|linktr\.ee|maps\.app\.goo\.gl|goo\.gl|g\.page|yelp\.[a-z.]+)$/i;
           function build() {
             var checks = [], type = $('lbs-type').value, online = !!ONLINE[type], o = { '@context': 'https://schema.org', '@type': type };
             var name = v('lbs-name');
             if (name) o.name = name; else checks.push(['err', 'Add the business name. Google requires it.']);
-            var url = webAddr(v('lbs-url'));
-            if (v('lbs-url') && !url) checks.push(['warn', '“' + v('lbs-url') + '” isn’t a web address, so it’s left out. Type it like example.com or https://example.com/.']);
+            if (/\s\|\s/.test(name)) checks.push(['warn', 'The name looks like a page title (it has a |). Use the name only, as it’s written on your sign.']);
+            var url = webAddr(v('lbs-url')), moved = '';
+            // A social profile or map link in the website box: it goes with the other pages instead
+            if (url && PROFILE.test(new URL(url).hostname.replace(/^www\.|^m\./i, '')) || /google\.[a-z.]+\/maps/i.test(url)) {
+              checks.push(['warn', '“' + v('lbs-url') + '” is a profile or map page, not your own website. This code goes on your own site, and “Website” should be that page’s address, so the link was moved to your other pages.']);
+              moved = url; url = '';
+            } else if (v('lbs-url') && !url) checks.push(['warn', '“' + v('lbs-url') + '” isn’t a web address, so it’s left out. Type it like example.com or https://example.com/.']);
             else if (url) {
               o.url = url;
               if (/^http:/i.test(url)) checks.push(['warn', 'Your website starts with http://. If the site works on https://, use that.']);
             } else checks.push(['warn', 'Add your website address. Google recommends it, and it should be the page this code goes on.']);
-            var tel = v('lbs-tel').replace(/^tel:\s*/i, '');
+            // "Phone: +44...", "Call us on +44..." keep the number; a WhatsApp link gives its number
+            var tel = v('lbs-tel').replace(/^tel:\s*/i, ''), wa = tel.match(/(?:wa\.me\/|whatsapp\.com\/send\/?\?phone=)\+?(\d{6,15})/i);
+            if (wa) {
+              tel = '+' + wa[1];
+              checks.push(['warn', 'That’s a WhatsApp link, so the code writes the number in it, ' + tel + '. Make sure it’s the number customers should call.']);
+            } else if (tel) {
+              tel = tel.replace(/^[^+(\d]+/, '');
+              var tels = tel.split(/\s*(?:[\/;|,]|\bor\b)\s*(?=[+(\d])/i);
+              if (tels.length > 1) { tel = tels[0]; checks.push(['warn', 'Google asks for one phone number, the main one customers call. The code uses the first, ' + tel + '. Put the others on the page.']); }
+            }
             if (tel) {
               o.telephone = tel;
               if (/^00/.test(tel)) checks.push(['warn', 'Replace the 00 at the start with +. The + means “the international prefix” from anywhere, while 00 is only how some countries dial out.']);
@@ -368,10 +385,13 @@ category: DeveloperApplication
             var named = addr.addressCountry && addr.addressCountry.length > 2 && COUNTRY[addr.addressCountry.toUpperCase().replace(/\s+/g, ' ')];
             if (named) { checks.push(['warn', 'Google asks for the two-letter country code, so the code below writes ' + addr.addressCountry + ' as ' + named + '.']); addr.addressCountry = named; }
             if (any) o.address = addr; else if (!online) checks.push(['err', 'Add an address. Google requires one, even if it is only your town and country.']);
-            if (any && !addr.addressLocality && !online) checks.push(['warn', 'Add your town or city.']);
+            // The whole address pasted into Street, as Google Maps copies it
+            var whole = !addr.addressLocality && (addr.streetAddress || '').split(',').length > 2;
+            if (whole) checks.push(['warn', 'The whole address seems to be in Street address. Put the town, postal code and country in their own boxes: the code gives each one its own field.']);
+            else if (any && !addr.addressLocality && !online) checks.push(['warn', 'Add your town or city.']);
             var c = v('lbs-country');
             if (c && !named && !/^[A-Za-z]{2}$/.test(c)) checks.push(['warn', 'Use the two-letter country code (US, GB, FR, DE, CA...) rather than the full name.']);
-            if (!c && any && !online) checks.push(['warn', 'Add the two-letter country code. Without it, a town name can match more than one place.']);
+            if (!c && any && !online && !whole) checks.push(['warn', 'Add the two-letter country code. Without it, a town name can match more than one place.']);
             var lat = v('lbs-lat'), lng = v('lbs-lng');
             if ((lat || lng) && online) checks.push(['warn', 'Latitude and longitude are left out. They mark a place on a map, and schema.org’s online business types have no field for them.']);
             else if (lat || lng) {
@@ -380,6 +400,8 @@ category: DeveloperApplication
               var la = pair ? pair[0] : coord(lat), lo = pair ? pair[1] : coord(lng);
               if (/google\.[a-z.]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps/i.test(lat + lng) && !pair) {
                 checks.push(['err', 'That’s a map link, not the coordinates. Right-click your pin in Google Maps and click the two numbers at the top of the menu, then paste them here.']);
+              } else if (/@-?\d+\.\d+,\s*-?\d+\.\d+/.test(lat + lng) && !pair) {
+                checks.push(['err', 'Those numbers are from the map’s address bar: they mark the middle of the screen, not your pin. Right-click your pin in Google Maps and click the two numbers at the top of the menu, then paste them here.']);
               } else if (!la || !lo || (la.ns === false) || (lo.ns === true) || Math.abs(la.n) > 90 || Math.abs(lo.n) > 180) {
                 checks.push(['err', 'Latitude and longitude should be numbers like 12.34567 and 98.76543, as Google Maps copies them. Leave both empty if unsure.']);
               } else {
@@ -391,6 +413,7 @@ category: DeveloperApplication
               if (/^(https?:\/\/)?[^\s\/@]+\.[^\s\/@]+/i.test(s)) return true;
               checks.push(['warn', '“' + s + '” isn’t a web address, so it’s left out. Paste the full profile link, like https://www.instagram.com/yourshop/.']);
             }).map(cleanUrl);
+            if (moved && same.indexOf(moved) < 0) same.unshift(moved);
             if (same.length) o.sameAs = same.length === 1 ? same[0] : same;
             var price = v('lbs-price');
             if (price && online) checks.push(['warn', 'Price range is left out. It’s a field for places, and schema.org’s online business types don’t have it. Put your prices on the page instead.']);
@@ -399,9 +422,19 @@ category: DeveloperApplication
               if (price.length >= 100) checks.push(['err', 'Price range must be shorter than 100 characters. "$$" or "$10-25" is plenty.']);
             }
             if (FOOD[type]) {
-              var menu = webAddr(v('lbs-menu')), cu = v('lbs-cuisine');
+              var menuIn = v('lbs-menu'), menu = '', cu = v('lbs-cuisine');
+              // "menu.pdf" or "/menu/" is a page on the website
+              if (/^\/|^[^\/\s:]+\.(pdf|jpe?g|png|webp|html?|php)$/i.test(menuIn)) {
+                if (url) {
+                  menu = new URL(menuIn.replace(/^(?!\/)/, '/'), new URL(url).origin).href;
+                  checks.push(['warn', 'The menu was a file or page name, so the code writes it as ' + menu + '. Open that address to check it works: Google asks for the full address.']);
+                } else checks.push(['warn', '“' + menuIn + '” is a page on your website. Fill in Website above and the code writes the menu’s full address.']);
+              } else {
+                menu = webAddr(menuIn);
+                if (!menu && menuIn) checks.push(['warn', '“' + menuIn + '” isn’t a web address, so it’s left out. Paste the full link to your menu, like https://example.com/menu/.']);
+              }
               if (menu) o.menu = menu;
-              if (cu) o.servesCuisine = cu.indexOf(',') >= 0 ? cu.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : cu;
+              if (cu) o.servesCuisine = /[,;]/.test(cu) ? cu.split(/[,;]/).map(function (s) { return s.trim(); }).filter(Boolean) : cu;
             }
 
             // Hours: identical days share one entry, one entry per time range

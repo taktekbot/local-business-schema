@@ -16,8 +16,8 @@ It runs entirely in your browser. What you type is never sent anywhere.
 - Holidays and special hours use `validFrom` and `validThrough`; a closed day is `opens` and `closes` both `00:00`.
 - The text list groups consecutive days with the same hours ("Monday to Friday: 9:00 to 17:00"), in 24-hour or 12-hour time.
 - Online-only businesses pick "Online shop" or "Online service" and get `OnlineStore` or `OnlineBusiness`, as Google's [Organization documentation](https://developers.google.com/search/docs/appearance/structured-data/organization) suggests. The address becomes optional, and coordinates, price range and opening hours are left out of the code with a note, because schema.org's online business types have no fields for them.
-- Reads what people paste: both coordinates in one box as Google Maps copies them (or degrees-minutes-seconds, or a Google Maps place link), a country name instead of its code, a `tel:` link, a label before the website address.
-- Checks flag missing required fields, a phone without a country code, a full country name instead of the two-letter code, short coordinates, and special hours that have already passed.
+- Reads what people paste: both coordinates in one box as Google Maps copies them (or degrees-minutes-seconds, or a Google Maps place link), a country name instead of its code, a `tel:` link, a label before the website address or phone number ("Call us on ..."), a WhatsApp link in the phone box (its number is used), two phone numbers (Google asks for one, so the first is used), a menu file name like `menu.pdf` (completed from the website), cuisines split by commas or semicolons.
+- Checks flag missing required fields, a phone without a country code, a full country name instead of the two-letter code, short coordinates, special hours that have already passed, a social profile or map link in the Website box (moved to your other pages: `url` is your own site), a whole address typed into Street address, coordinates copied from the map's address bar (the middle of the screen, not your pin), and a page title used as the business name.
 
 ## Files
 
